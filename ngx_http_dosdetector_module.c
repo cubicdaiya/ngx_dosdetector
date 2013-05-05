@@ -157,8 +157,10 @@ static ngx_int_t ngx_http_dosdetector_handler(ngx_http_request_t *r)
     ngx_http_dosdetector_conf_t *dcf;
     ngx_str_t *content_type;
     u_char *ip;
+#if (NGX_HTTP_X_FORWARDED_FOR)
     ngx_array_t *xfwd;
     ngx_table_elt_t **xfwd_elts;
+#endif
     ngx_slab_pool_t *shpool;
     ngx_http_dosdetector_client_list_t *client_list;
     struct sockaddr_in *sin;
@@ -183,6 +185,7 @@ static ngx_int_t ngx_http_dosdetector_handler(ngx_http_request_t *r)
 
     ip = NULL;
 
+#if (NGX_HTTP_X_FORWARDED_FOR)
     if (dcf->forwarded) {
         xfwd      = &r->headers_in.x_forwarded_for;
         xfwd_elts = xfwd->elts;
@@ -190,6 +193,7 @@ static ngx_int_t ngx_http_dosdetector_handler(ngx_http_request_t *r)
             ip = ngx_http_dosdetector_client_ip_from_xfwd(r, xfwd_elts[i]->value.data);
         }
     }
+#endif
 
     if (ip == NULL) {
         sin  = (struct sockaddr_in *)r->connection->sockaddr;

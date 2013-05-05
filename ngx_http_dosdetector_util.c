@@ -4,6 +4,7 @@
 
 #include "ngx_http_dosdetector_util.h"
 
+#if (NGX_HTTP_X_FORWARDED_FOR)
 u_char *ngx_http_dosdetector_client_ip_from_xfwd(ngx_http_request_t *r, u_char *xfwd)
 {
     int i;
@@ -21,6 +22,7 @@ u_char *ngx_http_dosdetector_client_ip_from_xfwd(ngx_http_request_t *r, u_char *
     ngx_cpystrn(ip, xfwd, i + 1);
     return ip;
 }
+#endif
 
 ngx_int_t ngx_http_dosdetector_is_ignore_content_type(ngx_http_request_t *r, ngx_str_t *content_type, ngx_str_t *pattern)
 {
