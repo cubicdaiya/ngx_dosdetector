@@ -2,6 +2,7 @@
  * Copyright (C) 2013 Tatsuhiko Kubo <cubicdaiya@gmail.com>
  */
 
+#include <nginx.h>
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
@@ -10,8 +11,8 @@
 #include "ngx_http_dosdetector_client.h"
 #include "ngx_http_dosdetector_util.h"
 
-#define NGX_HTTP_DOSDETECTOR_DEFAULT_THRESHOLD      10000
-#define NGX_HTTP_DOSDETECTOR_DEFAULT_HARD_THRESHOLD 20000
+#define NGX_HTTP_DOSDETECTOR_DEFAULT_THRESHOLD      1000
+#define NGX_HTTP_DOSDETECTOR_DEFAULT_HARD_THRESHOLD 2000
 #define NGX_HTTP_DOSDETECTOR_DEFAULT_PERIOD         10
 #define NGX_HTTP_DOSDETECTOR_DEFAULT_HARD_PERIOD    300
 #define NGX_HTTP_DOSDETECTOR_DEFAULT_TABLE_SIZE     100
@@ -153,14 +154,23 @@ ngx_module_t ngx_http_dosdetector_module = {
 
 static ngx_int_t ngx_http_dosdetector_handler(ngx_http_request_t *r)
 {
+    //
+    // In nginx which version is more than 1.3.13,
+    // the type of r->headers_in.x_forwarded_for is 
+    // not ngx_table_elt_t * but ngx_array_t *.
+    //
+#if (NGX_HTTP_X_FORWARDED_FOR)
+#if nginx_version > 1003013
     size_t i;
+    ngx_array_t *xfwd;
+    ngx_table_elt_t **xfwd_elts;
+#else
+    ngx_table_elt_t *xfwd;
+#endif
+#endif
     ngx_http_dosdetector_conf_t *dcf;
     ngx_str_t *content_type;
     u_char *ip;
-#if (NGX_HTTP_X_FORWARDED_FOR)
-    ngx_array_t *xfwd;
-    ngx_table_elt_t **xfwd_elts;
-#endif
     ngx_slab_pool_t *shpool;
     ngx_http_dosdetector_client_list_t *client_list;
     struct sockaddr_in *sin;
@@ -187,11 +197,18 @@ static ngx_int_t ngx_http_dosdetector_handler(ngx_http_request_t *r)
 
 #if (NGX_HTTP_X_FORWARDED_FOR)
     if (dcf->forwarded) {
+#if nginx_version > 1003013
         xfwd      = &r->headers_in.x_forwarded_for;
         xfwd_elts = xfwd->elts;
         for (i=0;i<xfwd->nelts;i++) {
             ip = ngx_http_dosdetector_client_ip_from_xfwd(r, xfwd_elts[i]->value.data);
         }
+#else
+        xfwd = r->headers_in.x_forwarded_for;
+        if (xfwd != NULL) {
+            ip = ngx_http_dosdetector_client_ip_from_xfwd(r, xfwd->value.data);
+        }
+#endif
     }
 #endif
 
