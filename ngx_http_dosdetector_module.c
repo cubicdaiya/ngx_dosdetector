@@ -225,7 +225,8 @@ static ngx_int_t ngx_http_dosdetector_handler(ngx_http_request_t *r)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "dosdetector: '%s' is suspected as Hard DoS attack! (counter: %d) %s:%d", ip, client->count, __FUNCTION__, __LINE__);
             }
             client->hard_suspected = now;
-            return NGX_HTTP_FORBIDDEN;
+            ngx_http_finalize_request(r, NGX_HTTP_CLOSE);
+            return NGX_HTTP_CLOSE;
         }
     } else {
         if(client->suspected > 0){
